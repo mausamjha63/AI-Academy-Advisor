@@ -1,12 +1,10 @@
-{% extends "base.html" %}
+import re
 
-{% block title %}Advisor Chat | AI Academic Advisor{% endblock %}
+with open('templates/advisor/chat.html', 'r') as f:
+    content = f.read()
 
-{% block header_title %}AI Academic Advisor{% endblock %}
-{% block header_subtitle %}Ask questions about policies, courses, and prerequisite eligibility.{% endblock %}
-
-{% block content %}
-
+# 1. Update the layout
+layout_replacement = """
 <div class="chat-layout" style="display: grid; grid-template-columns: 250px 1fr 300px; gap: var(--space-4); height: 100%;">
     
     <!-- Chat History Sidebar -->
@@ -26,23 +24,11 @@
 
     <!-- Main Chat Area -->
     <div class="chat-main card" style="height: calc(100vh - 120px); display: flex; flex-direction: column;">
+"""
+content = content.replace('<div class="chat-layout">\n    <!-- Main Chat Area -->\n    <div class="chat-main card">', layout_replacement)
 
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02);">
-            <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--color-primary); font-size: 0.875rem; text-transform: uppercase;">
-                <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"></path></svg>
-                <strong>Advisor Conversation</strong>
-            </div>
-        </div>
-        
-        <div id="chatHistory" class="chat-messages">
-            <!-- Initial Greeting -->
-            <div class="message msg-bot">
-                <p style="font-weight: 500;">Hello! I am the AI Academic Advisor.</p>
-                <p style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: var(--space-2);">Ask me questions about courses, prerequisites, rules, or select a Demo student profile from the top right to ask personalized eligibility questions.</p>
-            </div>
-        </div>
-        
-
+# 2. Add Microphone and Language Selector to input area
+input_area_replacement = """
         <div style="padding: var(--space-4); border-top: 1px solid var(--color-border); background: var(--color-surface);">
             <form id="chatForm" class="chat-input-area" style="display: flex; gap: var(--space-2);">
                 {% csrf_token %}
@@ -76,137 +62,22 @@
             </form>
             <div id="voiceStatus" style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem; display: none;"></div>
         </div>
+"""
+# Replace the existing input area
+old_input = """        <div style="padding: var(--space-4); border-top: 1px solid var(--color-border); background: var(--color-surface);">
+            <form id="chatForm" class="chat-input-area">
+                {% csrf_token %}
+                <input type="text" id="queryInput" placeholder="Ask an academic question..." required>
+                <button type="submit" id="sendBtn" class="btn btn-primary" style="min-width: 100px;">
+                    <span id="sendText">Send</span>
+                    <svg id="loadingSpinner" style="width: 20px; height: 20px; display: none; animation: spin 1s linear infinite;" fill="none" viewBox="0 0 24 24"><circle style="opacity: 0.25;" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path style="opacity: 0.75;" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </form>
+        </div>"""
+content = content.replace(old_input, input_area_replacement)
 
-    </div>
-    
-    <!-- Evidence / Metadata Panel -->
-    <div class="chat-side card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02);">
-            <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: 0.875rem; text-transform: uppercase;">
-                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                <strong>Evidence & Sources</strong>
-            </div>
-            <span id="stateIndicator" class="badge badge-neutral">WAITING</span>
-        </div>
-        
-        <div id="evidencePanel" class="evidence-panel" style="padding: var(--space-4); background: var(--color-bg);">
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; opacity: 0.6;">
-                <svg style="width: 48px; height: 48px; color: var(--color-border); margin-bottom: var(--space-3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <p style="font-size: 0.875rem; text-align: center;">Ask a question to see retrieved official sources and decision metadata.</p>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-@keyframes spin {
-    100% { transform: rotate(360deg); }
-}
-.truncate-3-lines {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-.state-badge {
-    padding: 0.15rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border: 1px solid;
-}
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.getElementById('chatForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const input = document.getElementById('queryInput');
-        const query = input.value;
-        const studentId = document.getElementById('student_id').value; 
-        const chatHistory = document.getElementById('chatHistory');
-        const evidencePanel = document.getElementById('evidencePanel');
-        const stateIndicator = document.getElementById('stateIndicator');
-        const sendBtn = document.getElementById('sendBtn');
-        const sendText = document.getElementById('sendText');
-        const spinner = document.getElementById('loadingSpinner');
-        
-        if (!query.trim()) return;
-        
-        // Add User Message
-        chatHistory.innerHTML += `
-            <div class="message msg-user">
-                <p>${query}</p>
-            </div>
-        `;
-        
-        input.value = '';
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-        
-        // Loading state
-        stateIndicator.textContent = "PROCESSING...";
-        stateIndicator.className = "badge badge-warning";
-        
-        sendBtn.disabled = true;
-        sendText.style.display = 'none';
-        spinner.style.display = 'block';
-        
-        try {
-            const formData = new FormData();
-            formData.append('query', query);
-            if (studentId) formData.append('student_id', studentId);
-            if (currentSessionId) formData.append('session_id', currentSessionId);
-            
-            const response = await fetch('/advisor/chat/', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-            
-            const data = await response.json();
-            
-            if (data.session_id && !currentSessionId) {
-                currentSessionId = data.session_id;
-                loadChatHistory();
-            }
-            renderAssistantMessage(data, chatHistory, true);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-            
-        } catch (error) {
-            console.error(error);
-            stateIndicator.textContent = "ERROR";
-            stateIndicator.className = "badge badge-danger";
-            chatHistory.innerHTML += `
-                <div class="message msg-bot" style="background: #fff1f2; border-color: #fecdd3; color: #9f1239;">
-                    <p style="font-weight: 500;">An error occurred while connecting to the Advisor Service. Please check the server logs.</p>
-                </div>
-            `;
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        } finally {
-            sendBtn.disabled = false;
-            sendText.style.display = 'inline';
-            spinner.style.display = 'none';
-        }
-    });
-    
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    
-
+# 3. Add JS for Voice, History, and currentSessionId
+js_additions = """
     let currentSessionId = null;
     const voiceStatus = document.getElementById('voiceStatus');
     const micBtn = document.getElementById('micBtn');
@@ -432,18 +303,36 @@
             document.getElementById('newChatBtn').click();
         });
     }
+"""
 
-    // Auto-submit if 'q' is in URL
-    document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const q = urlParams.get('q');
-        if (q) {
-            document.getElementById('queryInput').value = q;
-            document.getElementById('sendBtn').click();
-            // Clean up the URL to prevent resubmission on refresh
-            const newUrl = window.location.pathname + (urlParams.get('student_id') ? '?student_id=' + urlParams.get('student_id') : '');
-            window.history.replaceState({}, document.title, newUrl);
-        }
-    });
-</script>
-{% endblock %}
+# 4. Modify the chat form submission
+# We need to append session_id to formData and use the reusable renderAssistantMessage
+submit_replacement_find = """            if (studentId) formData.append('student_id', studentId);"""
+submit_replacement_replace = """            if (studentId) formData.append('student_id', studentId);
+            if (currentSessionId) formData.append('session_id', currentSessionId);"""
+
+content = content.replace(submit_replacement_find, submit_replacement_replace)
+
+render_find = """            // Render State
+            let badgeClass = "badge badge-neutral";
+            let stateStyle = "";"""
+render_end = """                        <p style="font-size: 0.875rem; text-align: center;">No specific institutional sources were retrieved for this query.</p>
+                    </div>`;
+            }"""
+
+render_regex = re.compile(re.escape(render_find) + r'.*?' + re.escape(render_end), re.DOTALL)
+render_replace = """            if (data.session_id && !currentSessionId) {
+                currentSessionId = data.session_id;
+                loadChatHistory();
+            }
+            renderAssistantMessage(data, chatHistory, true);
+            chatHistory.scrollTop = chatHistory.scrollHeight;"""
+
+content = render_regex.sub(render_replace, content)
+
+# 5. Insert JS additions before the final closing script tag
+content = content.replace('    // Auto-submit if \'q\' is in URL', js_additions + '\n    // Auto-submit if \'q\' is in URL')
+
+with open('templates/advisor/chat.html', 'w') as f:
+    f.write(content)
+
