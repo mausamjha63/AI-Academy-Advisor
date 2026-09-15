@@ -6,14 +6,11 @@ from django.conf import settings
 from students.models import Student, StudentCourseHistory
 from academics.models import Course, CourseOffering, Prerequisite
 from django.db.models import Sum
-import chromadb
-import os
+from rag.models import DocumentChunk
 
 def get_chunk_count():
     try:
-        chroma_client = chromadb.PersistentClient(path=os.path.join(settings.BASE_DIR, 'rag_data'))
-        collection = chroma_client.get_collection(name='academic_kb')
-        return collection.count()
+        return DocumentChunk.objects.filter(embedding__isnull=False).count()
     except Exception:
         return "Unknown"
 
