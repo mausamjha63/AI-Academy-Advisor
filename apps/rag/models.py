@@ -17,6 +17,7 @@ class DocumentChunk(models.Model):
     section = models.CharField(max_length=255, null=True, blank=True)
     chunk_hash = models.CharField(max_length=64, unique=True)
     vector_id = models.CharField(max_length=100, null=True, blank=True)
+    embedding = models.JSONField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     
     def __str__(self):

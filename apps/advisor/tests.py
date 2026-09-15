@@ -78,7 +78,8 @@ class AdvisorServiceTest(TestCase):
         self.assertIn("Please ask an academic question", response['answer'])
 
     @mock.patch.dict(os.environ, {"GEMINI_API_KEY": ""})
-    def test_missing_api_key_fallback(self):
+    @mock.patch('google.genai.Client')
+    def test_missing_api_key_fallback(self, mock_client):
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[{'content': 'Test evidence'}]):
             service = AdvisorService()
             response = service.process_query("What is the attendance rule?")
