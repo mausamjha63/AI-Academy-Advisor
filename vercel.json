@@ -1,18 +1,8 @@
 {
-  "buildCommand": "./build.sh",
-  "builds": [
+  "rewrites": [
     {
-      "src": "config/wsgi.py",
-      "use": "@vercel/python",
-      "config": {
-        "includeFiles": "staticfiles/**"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "config/wsgi.py"
+      "source": "/(.*)",
+      "destination": "/config/wsgi.py"
     }
   ]
 }

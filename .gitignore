@@ -63,4 +63,4 @@ cover/
 
 # AI Academic Advisor specific
 # allow scratch for evaluation scripts
-staticfiles/
+public/
