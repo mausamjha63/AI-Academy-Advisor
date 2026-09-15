@@ -10,12 +10,12 @@
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02);">
         <span>Course Catalogue</span>
         
-        <form method="GET" style="display: flex;">
+        <form method="GET" style="display: flex; gap: var(--space-2); flex-wrap: wrap; width: 100%; max-width: 100%; box-sizing: border-box;">
             {% if request.GET.student_id %}
             <input type="hidden" name="student_id" value="{{ request.GET.student_id }}">
             {% endif %}
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Search courses..." style="padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border); border-right: none; border-radius: var(--radius-md) 0 0 var(--radius-md); font-size: 0.875rem; width: 250px; outline: none;">
-            <button type="submit" class="btn btn-primary" style="border-radius: 0 var(--radius-md) var(--radius-md) 0;">Search</button>
+            <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="Search course code or title..." style="flex: 1; min-width: 0; box-sizing: border-box;">
+            <button type="submit" class="btn btn-primary" style="flex-shrink: 0; box-sizing: border-box;">Search</button>
         </form>
     </div>
     
