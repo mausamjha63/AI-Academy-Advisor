@@ -138,3 +138,71 @@ class AdvisorServiceTest(TestCase):
             
             # The backend must override the LLM's hallucinated ELIGIBLE state
             self.assertEqual(response['state'], "NOT_ELIGIBLE")
+
+from django.test import Client
+from django.urls import reverse
+from advisor.models import ChatSession, ChatMessage
+
+class ChatHistoryTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.student = Student.objects.create(student_id="STUDENT-123")
+        self.session1 = ChatSession.objects.create(title="Session 1", student_id="STUDENT-123")
+        self.session2 = ChatSession.objects.create(title="Session 2", student_id="STUDENT-456")
+        self.session3 = ChatSession.objects.create(title="Session 3", student_id=None)
+
+    def test_chat_session_creation(self):
+        session = ChatSession.objects.create(title="Test Session", student_id="STUDENT-123")
+        self.assertEqual(session.title, "Test Session")
+        self.assertEqual(session.student_id, "STUDENT-123")
+
+    def test_chat_message_persistence(self):
+        msg = ChatMessage.objects.create(session=self.session1, role="user", content={"text": "Hello"})
+        self.assertEqual(msg.role, "user")
+        self.assertEqual(msg.content["text"], "Hello")
+        self.assertEqual(msg.session, self.session1)
+
+    def test_history_retrieval(self):
+        response = self.client.get(reverse('get_chat_history') + '?student_id=STUDENT-123')
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data['sessions']), 1)
+        self.assertEqual(data['sessions'][0]['id'], self.session1.id)
+
+    def test_loading_previous_session(self):
+        ChatMessage.objects.create(session=self.session1, role="user", content={"text": "Test"})
+        response = self.client.get(reverse('get_chat_messages', args=[self.session1.id]))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data['messages']), 1)
+        self.assertEqual(data['messages'][0]['content']['text'], "Test")
+
+    def test_new_chat_isolation(self):
+        # Without session_id
+        with mock.patch('advisor.services.advisor_service.AdvisorService.process_query', return_value={'state': 'ANSWERED', 'answer': 'Test', 'evidence': []}):
+            response = self.client.post(reverse('advisor_chat'), {'query': 'Hello', 'student_id': 'STUDENT-123'})
+            data = json.loads(response.content)
+            self.assertIn('session_id', data)
+            self.assertNotEqual(data['session_id'], self.session1.id)
+            new_session_id = data['session_id']
+            # With session_id (continue chat)
+            response2 = self.client.post(reverse('advisor_chat'), {'query': 'Followup', 'student_id': 'STUDENT-123', 'session_id': new_session_id})
+            data2 = json.loads(response2.content)
+            self.assertEqual(data2['session_id'], new_session_id)
+
+    def test_student_context_isolation(self):
+        response1 = self.client.get(reverse('get_chat_history') + '?student_id=STUDENT-123')
+        data1 = json.loads(response1.content)
+        self.assertEqual(len(data1['sessions']), 1)
+        self.assertEqual(data1['sessions'][0]['id'], self.session1.id)
+
+        response2 = self.client.get(reverse('get_chat_history') + '?student_id=STUDENT-456')
+        data2 = json.loads(response2.content)
+        self.assertEqual(len(data2['sessions']), 1)
+        self.assertEqual(data2['sessions'][0]['id'], self.session2.id)
+
+        # General mode (no student)
+        response3 = self.client.get(reverse('get_chat_history'))
+        data3 = json.loads(response3.content)
+        self.assertEqual(len(data3['sessions']), 1)
+        self.assertEqual(data3['sessions'][0]['id'], self.session3.id)
