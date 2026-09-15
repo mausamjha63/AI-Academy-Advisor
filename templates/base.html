@@ -13,6 +13,8 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('sidebar-open'); document.querySelector('.sidebar-overlay').classList.remove('active');"></div>
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -71,6 +73,9 @@
             <!-- Top Header -->
             <header class="top-header">
                 <div class="header-left">
+                    <button type="button" class="hamburger-btn" onclick="document.querySelector('.sidebar').classList.add('sidebar-open'); document.querySelector('.sidebar-overlay').classList.add('active');">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
                     <h2>{% block header_title %}Overview{% endblock %}</h2>
                     <p>{% block header_subtitle %}AI Academic Support System{% endblock %}</p>
                 </div>

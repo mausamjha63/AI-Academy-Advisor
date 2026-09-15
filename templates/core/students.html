@@ -10,6 +10,7 @@
     <div class="card-header">Student Directory</div>
     <div class="card-body" style="padding: 0;">
         {% if synthetic_students %}
+    <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
@@ -40,6 +41,7 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
         {% else %}
         <div style="padding: var(--space-8); text-align: center; color: var(--color-text-muted);">
             No synthetic students found in the database.

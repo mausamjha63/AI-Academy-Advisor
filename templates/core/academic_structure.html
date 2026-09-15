@@ -10,6 +10,7 @@
     <div class="card-header">Course Offerings Map</div>
     <div class="card-body" style="padding: 0;">
         {% if offerings %}
+    <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
@@ -30,6 +31,7 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
         {% else %}
         <div style="padding: var(--space-8); text-align: center; color: var(--color-text-muted);">
             No course offerings found in the database.

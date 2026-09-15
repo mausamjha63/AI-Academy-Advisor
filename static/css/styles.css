@@ -432,3 +432,172 @@ body {
 .nav-link-logout:hover svg {
     color: #e11d48;
 }
+
+/* ==========================================================================
+   Mobile Responsiveness
+   ========================================================================== */
+
+/* 1. Base Layout & Header adjustments */
+@media (max-width: 1024px) {
+    .header-right { gap: var(--space-2); }
+    .search-box { width: 180px; }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 50;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .sidebar.sidebar-open {
+        transform: translateX(0);
+    }
+
+    .top-header {
+        padding: 0 var(--space-4);
+        height: auto;
+        min-height: 60px;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        padding-top: var(--space-2);
+        padding-bottom: var(--space-2);
+    }
+    
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+    }
+    
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: var(--space-2);
+    }
+    
+    .search-box {
+        width: 100%;
+        flex-grow: 1;
+        margin-right: var(--space-2);
+    }
+
+    .main-scroll-area {
+        padding: var(--space-4);
+    }
+    
+    /* Overlay for sidebar */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 40;
+    }
+    .sidebar-overlay.active { display: block; }
+}
+
+/* Hamburger button for mobile */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--color-text-main);
+    cursor: pointer;
+    padding: var(--space-1);
+}
+@media (max-width: 768px) {
+    .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
+}
+
+/* 2. Generic Grids */
+@media (max-width: 1024px) {
+    .grid-cols-4, .grid-cols-5 { grid-template-columns: repeat(2, 1fr); }
+    .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+    .grid-cols-2, .grid-cols-3, .grid-cols-4, .grid-cols-5 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 3. Dashboard specific */
+@media (max-width: 640px) {
+    .hero-content h1 { font-size: 1.75rem; }
+    .hero-content p { font-size: 0.9rem; }
+    .dashboard-hero { height: 250px; }
+    .stat-card { flex-direction: column; text-align: center; }
+    .stat-icon { margin-right: 0; margin-bottom: var(--space-3); }
+}
+
+/* 4. Advisor Chat Layout */
+@media (max-width: 1024px) {
+    .chat-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 80vh;
+    }
+    
+    .chat-history-sidebar {
+        height: auto !important;
+        position: static !important;
+        max-height: 300px;
+    }
+    
+    .chat-main {
+        height: 500px !important;
+    }
+}
+
+/* Extreme Mobile (320px - 414px) strict fixes */
+@media (max-width: 430px) {
+    .chat-input-area {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+        box-sizing: border-box;
+    }
+    .chat-input-area input {
+        flex: 1 1 0%;
+        min-width: 0;
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        box-sizing: border-box;
+    }
+    .chat-input-area #micBtn {
+        flex-shrink: 0;
+        padding: 0 0.5rem;
+        box-sizing: border-box;
+    }
+    .chat-input-area #sendBtn {
+        flex-shrink: 0;
+        min-width: 60px;
+        padding: 0 0.5rem;
+        font-size: 0.875rem;
+        box-sizing: border-box;
+    }
+    .chat-input-area #sendText {
+        display: none; /* Hide 'Send' text to save space on small screens, show icon instead if we want, or just 'Send' */
+    }
+    .chat-input-area #sendBtn::after {
+        content: 'Send'; /* Fallback */
+    }
+}
+
+/* 5. Tables */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.table {
+    min-width: 600px; /* Force scroll on small screens */
+}

@@ -685,7 +685,7 @@ body {
 /* Auth Pages */
 .auth-layout {
     min-height: 100vh;
-    width: 100vw;
+    width: 100%;
     background-image: url('../media/PHOTO-2026-09-14-00-06-30(1).jpg');
     background-size: cover;
     background-position: center;
