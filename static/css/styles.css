@@ -687,3 +687,115 @@ body {
         overflow-wrap: anywhere;
     }
 }
+
+/* ==========================================================================
+   Floating AI Advisor Widget
+   ========================================================================== */
+.ai-widget-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -2px rgba(79, 70, 229, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    border: none;
+    transition: transform 0.2s, background-color 0.2s;
+}
+.ai-widget-btn:hover {
+    transform: scale(1.05);
+    background-color: var(--color-accent-hover);
+}
+.ai-widget-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    width: 380px;
+    max-height: 600px;
+    height: calc(100vh - 120px);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+.ai-widget-panel.open {
+    display: flex;
+}
+.ai-widget-header {
+    background: var(--color-primary);
+    color: white;
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.ai-widget-controls button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    opacity: 0.8;
+    padding: 0 4px;
+}
+.ai-widget-controls button:hover { opacity: 1; }
+.ai-widget-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4);
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.ai-widget-input-area {
+    padding: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+}
+.ai-widget-footer {
+    text-align: center;
+    padding: var(--space-2);
+    background: var(--color-bg);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--color-border);
+}
+.ai-widget-footer a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+.ai-widget-sources {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2);
+    background: var(--color-surface);
+    display: none;
+}
+.ai-widget-sources.open { display: block; }
+.ai-widget-sources-btn {
+    background: none; border: none; color: var(--color-accent); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;
+}
+@media (max-width: 430px) {
+    .ai-widget-panel {
+        width: calc(100% - 24px);
+        right: 12px;
+        bottom: 90px;
+        max-width: 420px;
+        height: calc(100vh - 120px);
+    }
+}

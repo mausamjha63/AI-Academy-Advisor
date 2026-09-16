@@ -110,6 +110,275 @@
             </main>
         </div>
     </div>
+    
+    {% if not '/advisor/chat' in request.path %}
+    <!-- Floating AI Widget -->
+    <button class="ai-widget-btn" id="aiWidgetBtn" aria-label="Open AI Academic Advisor" title="Ask AI Academic Advisor">
+        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+    </button>
+    <div class="ai-widget-panel" id="aiWidgetPanel">
+        <div class="ai-widget-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                🎓 AI Academic Advisor <span style="font-size: 0.7rem; color: #a7f3d0;">● Online</span>
+            </div>
+            <div class="ai-widget-controls">
+                <button id="aiWidgetMinimize" aria-label="Minimize Chat">−</button>
+                <button id="aiWidgetClose" aria-label="Close Chat">×</button>
+            </div>
+        </div>
+        <div class="ai-widget-messages" id="aiWidgetMessages">
+            <div class="message msg-bot">
+                <p style="font-weight: 500;">Hi! 👋<br>I'm your AI Academic Advisor.</p>
+                <p style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 8px;">You can ask me about:<br>• Courses<br>• Prerequisites<br>• Attendance<br>• Academic policies<br>• Registration<br>• Eligibility<br><br>How can I help you today?</p>
+            </div>
+        </div>
+        <div class="ai-widget-input-area">
+            <form id="aiWidgetForm" style="display: flex; gap: 8px;">
+                <input type="text" id="aiWidgetInput" placeholder="Ask your question..." required style="flex: 1; min-width: 0; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.875rem;">
+                <button type="button" id="aiWidgetMic" class="btn btn-secondary" style="padding: 0 8px; flex-shrink: 0;" aria-label="Voice Input">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <button type="submit" id="aiWidgetSend" class="btn btn-primary" style="padding: 0 12px; flex-shrink: 0;" aria-label="Send Message">➤</button>
+            </form>
+            <div id="aiWidgetVoiceStatus" style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 4px; display: none;"></div>
+        </div>
+        <div class="ai-widget-footer">
+            <a href="{% url 'advisor_chat' %}" id="aiWidgetFullLink">Open Full Advisor →</a>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('aiWidgetBtn');
+        const panel = document.getElementById('aiWidgetPanel');
+        const minBtn = document.getElementById('aiWidgetMinimize');
+        const closeBtn = document.getElementById('aiWidgetClose');
+        const form = document.getElementById('aiWidgetForm');
+        const input = document.getElementById('aiWidgetInput');
+        const messages = document.getElementById('aiWidgetMessages');
+        const sendBtn = document.getElementById('aiWidgetSend');
+        const fullLink = document.getElementById('aiWidgetFullLink');
+        
+        let widgetSessionId = null;
+
+        function toggleWidget() {
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) input.focus();
+        }
+
+        btn.addEventListener('click', toggleWidget);
+        minBtn.addEventListener('click', toggleWidget);
+        closeBtn.addEventListener('click', () => {
+            panel.classList.remove('open');
+        });
+
+        // Add User Message Helper
+        function addUserMsg(text) {
+            const div = document.createElement('div');
+            div.className = 'message msg-user';
+            div.innerHTML = `<p>${text}</p>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Add Assistant Message Helper
+        function addBotMsg(data) {
+            let badgeClass = "badge badge-neutral";
+            let stateStyle = "";
+            if (data.state === 'ELIGIBLE') { badgeClass = 'badge badge-success'; stateStyle = "background: #d1fae5; color: #065f46; border-color: #34d399;"; }
+            else if (data.state === 'NOT_ELIGIBLE') { badgeClass = 'badge badge-danger'; stateStyle = "background: #fee2e2; color: #991b1b; border-color: #f87171;"; }
+            else if (data.state === 'NEEDS_MORE_INFORMATION') { badgeClass = 'badge badge-warning'; stateStyle = "background: #fef3c7; color: #92400e; border-color: #fbbf24;"; }
+            else if (data.state === 'CONFLICTING_INFORMATION') { badgeClass = 'badge badge-warning'; stateStyle = "background: #ffedd5; color: #9a3412; border-color: #fdba74;"; }
+            else { badgeClass = 'badge badge-neutral'; stateStyle = "background: #f1f5f9; color: #334155; border-color: #cbd5e1;"; }
+            
+            let contentHtml = `<div style="margin-top: 0.5rem; line-height: 1.5; font-size: 0.95rem; white-space: pre-wrap;">${data.answer}</div>`;
+            
+            if (data.reason) {
+                contentHtml += `
+                    <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border);">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase;">Reasoning</span>
+                        <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.25rem;">${data.reason}</div>
+                    </div>`;
+            }
+            if (data.missing_information && data.missing_information.length > 0) {
+                contentHtml += `
+                    <div style="margin-top: 0.75rem; background: #fffbeb; border: 1px solid #fde68a; padding: 0.75rem; border-radius: var(--radius-md);">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: #b45309; text-transform: uppercase;">Missing Information</span>
+                        <ul style="font-size: 0.875rem; color: #92400e; margin-left: 1rem; margin-top: 0.25rem;">
+                            ${data.missing_information.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    </div>`;
+            }
+            if (data.recommendation) {
+                contentHtml += `
+                    <div style="margin-top: 0.75rem; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.75rem; border-radius: var(--radius-md);">
+                        <span style="font-size: 0.7rem; font-weight: 700; color: #047857; text-transform: uppercase;">Recommendation</span>
+                        <div style="font-size: 0.875rem; color: #065f46; margin-top: 0.25rem;">${data.recommendation}</div>
+                    </div>`;
+            }
+
+            let sourcesHtml = '';
+            if (data.evidence && data.evidence.length > 0) {
+                let evidenceItems = data.evidence.map((ev, i) => {
+                    if (typeof ev === 'string') {
+                        return `<div style="margin-bottom:8px;"><strong>${i+1}</strong> ${ev}</div>`;
+                    }
+                    return `<div style="margin-bottom:8px;"><strong>${i+1}</strong> <span style="background: var(--color-primary-light); color: white; padding: 2px 4px; border-radius: 2px;">${ev.source}</span>${ev.page ? ` (Loc: ${ev.page})` : ''}<br>${ev.content}</div>`;
+                }).join('');
+                sourcesHtml = `
+                    <div style="margin-top: 8px;">
+                        <button class="ai-widget-sources-btn" onclick="this.nextElementSibling.classList.toggle('open')">View Sources ▾</button>
+                        <div class="ai-widget-sources">${evidenceItems}</div>
+                    </div>
+                `;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'message msg-bot';
+            div.innerHTML = `
+                <span class="state-badge" style="${stateStyle}">${data.state}</span>
+                ${contentHtml}
+                ${sourcesHtml}
+            `;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = input.value;
+            if (!query.trim()) return;
+
+            addUserMsg(query);
+            input.value = '';
+            
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'message msg-bot';
+            loadingDiv.innerHTML = '<p>Processing...</p>';
+            messages.appendChild(loadingDiv);
+            messages.scrollTop = messages.scrollHeight;
+            sendBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('query', query);
+                const studentSelect = document.getElementById('student_id');
+                if (studentSelect && studentSelect.value) {
+                    formData.append('student_id', studentSelect.value);
+                }
+                if (widgetSessionId) {
+                    formData.append('session_id', widgetSessionId);
+                }
+
+                const response = await fetch('/advisor/chat/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                
+                const data = await response.json();
+                if (data.session_id && !widgetSessionId) {
+                    widgetSessionId = data.session_id;
+                    const baseUrl = fullLink.getAttribute('href').split('?')[0];
+                    fullLink.setAttribute('href', `${baseUrl}?session_id=${widgetSessionId}`);
+                }
+                
+                document.getElementById(loadingId).remove();
+                addBotMsg(data);
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                addBotMsg({state: 'ERROR', answer: 'An error occurred connecting to Advisor Service.', reason: '', missing_information: [], recommendation: '', evidence: []});
+            } finally {
+                sendBtn.disabled = false;
+            }
+        });
+
+        // Speech Recognition
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const micBtn = document.getElementById('aiWidgetMic');
+        const voiceStatus = document.getElementById('aiWidgetVoiceStatus');
+        
+        let recognition = null;
+        let isListening = false;
+        let finalTranscript = '';
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            
+            recognition.onstart = function() {
+                isListening = true;
+                voiceStatus.textContent = "Listening...";
+                voiceStatus.style.display = "block";
+                micBtn.style.background = "#fca5a5";
+                micBtn.style.color = "white";
+                finalTranscript = input.value;
+                if (finalTranscript.length > 0 && !finalTranscript.endsWith(' ')) {
+                    finalTranscript += ' ';
+                }
+            };
+            
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                input.value = finalTranscript + interimTranscript;
+            };
+            
+            recognition.onerror = function(event) {
+                voiceStatus.textContent = "Voice error: " + event.error;
+                voiceStatus.style.display = "block";
+                micBtn.style.background = "";
+                micBtn.style.color = "";
+                isListening = false;
+                setTimeout(() => { voiceStatus.style.display = "none"; }, 3000);
+            };
+            
+            recognition.onend = function() {
+                voiceStatus.style.display = "none";
+                micBtn.style.background = "";
+                micBtn.style.color = "";
+                isListening = false;
+                input.value = finalTranscript.trim();
+            };
+            
+            micBtn.addEventListener('click', () => {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    try { recognition.start(); } catch(e) {}
+                }
+            });
+        } else {
+            micBtn.style.display = 'none';
+        }
+    });
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
