@@ -179,7 +179,7 @@ class AdvisorService:
         if self.client:
             try:
                 response = self.client.models.generate_content(
-                    model='gemini-3.6-flash',
+                    model=os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash'),
                     contents=prompt,
                 )
                 raw_answer = response.text
@@ -213,7 +213,7 @@ class AdvisorService:
                 except json.JSONDecodeError:
                     print("[ERROR] Failed to parse JSON from LLM")
                     return self._build_response(
-                        decision_state or "ANSWERED", 
+                        decision_state or "ERROR", 
                         "The AI service is temporarily unavailable. Please try again.", 
                         []
                     )
@@ -221,13 +221,13 @@ class AdvisorService:
             except Exception as e:
                 print(f"[ERROR] LLM API Error: {type(e).__name__} - {str(e)}")
                 return self._build_response(
-                    decision_state or "ANSWERED", 
+                    decision_state or "ERROR", 
                     "The AI service is temporarily unavailable. Please try again.", 
                     []
                 )
         else:
             return self._build_response(
-                decision_state or "ANSWERED", 
+                decision_state or "ERROR", 
                 "The AI generation service API key is missing. Please configure GEMINI_API_KEY.", 
                 []
             )
