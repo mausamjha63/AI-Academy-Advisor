@@ -29,3 +29,19 @@ class AcademicDataService:
             offerings = offerings.filter(batch_context__icontains=batch)
             
         return list(offerings)
+
+    @staticmethod
+    def search_courses(query_text, limit=15):
+        import string
+        stopwords = {'course', 'code', 'for', 'of', 'in', 'the', 'what', 'is', 'are', 'show', 'me', 'list', 'give', 'codes', 'which', 'offered', 'under', 'minor', 'major', 'courses'}
+        clean_query = query_text.lower().translate(str.maketrans('', '', string.punctuation))
+        tokens = [w for w in clean_query.split() if w not in stopwords and len(w) > 2]
+        
+        if not tokens:
+            return []
+            
+        q_objects = Q()
+        for token in tokens:
+            q_objects |= Q(title__icontains=token) | Q(programme_applicability__icontains=token) | Q(course_code__icontains=token)
+            
+        return list(Course.objects.filter(q_objects).distinct()[:limit])

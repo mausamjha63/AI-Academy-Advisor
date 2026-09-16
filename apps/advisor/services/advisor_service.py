@@ -90,9 +90,31 @@ class AdvisorService:
                     offering_str = "; ".join([f"Sem {o.semester} ({o.academic_year})" for o in offerings])
                 
                 structured_evidence.append({
-                    "content": f"Course: {course.course_code} - {course.title}, Credits: {course.credits}. Prerequisites: {prereq_str}. Offerings: {offering_str}.",
-                    "source": course.source_metadata.get('source_file', 'Structured Database'),
-                    "page": course.source_metadata.get('sheet_name', ''),
+                    "content": f"Course: {course.course_code} - {course.title}, Credits: {course.credits}. Programme: {course.programme_applicability}. Prerequisites: {prereq_str}. Offerings: {offering_str}.",
+                    "source": course.source_metadata.get('source_file', 'Structured Database') if course.source_metadata else 'Structured Database',
+                    "page": course.source_metadata.get('sheet_name', '') if course.source_metadata else '',
+                    "metadata": course.source_metadata
+                })
+                
+        # If no explicit course codes were extracted, try a natural language search against structured data
+        if not potential_codes and not structured_evidence:
+            search_results = AcademicDataService.search_courses(user_query)
+            for course in search_results:
+                prereqs = AcademicDataService.get_prerequisites(course.course_code)
+                offerings = AcademicDataService.get_course_offerings(course.course_code)
+                
+                prereq_str = "None"
+                if prereqs:
+                    prereq_str = "; ".join([p.prerequisite_condition for p in prereqs])
+                    
+                offering_str = "Unknown"
+                if offerings:
+                    offering_str = "; ".join([f"Sem {o.semester} ({o.academic_year})" for o in offerings])
+                
+                structured_evidence.append({
+                    "content": f"Course: {course.course_code} - {course.title}, Credits: {course.credits}. Programme: {course.programme_applicability}. Prerequisites: {prereq_str}. Offerings: {offering_str}.",
+                    "source": course.source_metadata.get('source_file', 'Structured Database') if course.source_metadata else 'Structured Database',
+                    "page": course.source_metadata.get('sheet_name', '') if course.source_metadata else '',
                     "metadata": course.source_metadata
                 })
                 

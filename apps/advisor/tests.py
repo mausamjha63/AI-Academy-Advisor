@@ -206,3 +206,93 @@ class ChatHistoryTest(TestCase):
         data3 = json.loads(response3.content)
         self.assertEqual(len(data3['sessions']), 1)
         self.assertEqual(data3['sessions'][0]['id'], self.session3.id)
+
+
+class CourseCatalogueSearchTest(TestCase):
+    def setUp(self):
+        from academics.models import Course, CourseOffering
+        self.service = AdvisorService()
+        self.course1 = Course.objects.create(
+            course_code="LAW101",
+            title="Legal Methods",
+            credits=3.0,
+            programme_applicability="Law Minor",
+            source_metadata={"source_file": "db"}
+        )
+        self.course2 = Course.objects.create(
+            course_code="LAW201",
+            title="Constitutional Law",
+            credits=4.0,
+            programme_applicability="Law Minor",
+            source_metadata={"source_file": "db"}
+        )
+        self.course3 = Course.objects.create(
+            course_code="PSYC101",
+            title="Intro to Psychology",
+            credits=3.0,
+            programme_applicability="Psychology Minor",
+            source_metadata={"source_file": "db"}
+        )
+        CourseOffering.objects.create(course=self.course1, semester="1", academic_year="2026")
+        CourseOffering.objects.create(course=self.course2, semester="2", academic_year="2026")
+
+    @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+    @mock.patch('google.genai.Client')
+    def test_course_code_for_law_courses(self, mock_client):
+        # 1. "course code for law courses"
+        instance = mock_client.return_value
+        class MockResponse:
+            text = json.dumps({"state": "ANSWERED", "answer": "The law courses are LAW101 and LAW201.", "evidence": ["Course: LAW101", "Course: LAW201"]})
+        instance.models.generate_content.return_value = MockResponse()
+        
+        with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
+            response = self.service.process_query("course code for law courses")
+            # Should not be INFORMATION_UNAVAILABLE because structured data finds LAW101 and LAW201
+            self.assertEqual(response['state'], "ANSWERED")
+            self.assertIn("LAW101", response['answer'])
+
+    @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+    @mock.patch('google.genai.Client')
+    def test_law_minor_course_codes(self, mock_client):
+        # 2. "give me law minor course codes"
+        instance = mock_client.return_value
+        class MockResponse:
+            text = json.dumps({"state": "ANSWERED", "answer": "LAW101 and LAW201.", "evidence": []})
+        instance.models.generate_content.return_value = MockResponse()
+        with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
+            response = self.service.process_query("give me law minor course codes")
+            self.assertEqual(response['state'], "ANSWERED")
+
+    @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+    @mock.patch('google.genai.Client')
+    def test_course_code_of_legal_methods(self, mock_client):
+        # 4. "what is the course code of Legal Methods?"
+        instance = mock_client.return_value
+        class MockResponse:
+            text = json.dumps({"state": "ANSWERED", "answer": "LAW101", "evidence": []})
+        instance.models.generate_content.return_value = MockResponse()
+        with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
+            response = self.service.process_query("what is the course code of Legal Methods?")
+            self.assertEqual(response['state'], "ANSWERED")
+
+    @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+    @mock.patch('google.genai.Client')
+    def test_non_law_minor(self, mock_client):
+        # 5. A non-Law minor/course query
+        instance = mock_client.return_value
+        class MockResponse:
+            text = json.dumps({"state": "ANSWERED", "answer": "PSYC101", "evidence": []})
+        instance.models.generate_content.return_value = MockResponse()
+        with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
+            response = self.service.process_query("what courses are in psychology minor?")
+            self.assertEqual(response['state'], "ANSWERED")
+
+    @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+    @mock.patch('google.genai.Client')
+    def test_genuinely_unavailable_course(self, mock_client):
+        # 6. Genuinely unavailable
+        # No mock response needed since it shouldn't even reach the LLM if evidence is empty
+        with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
+            response = self.service.process_query("what is the course code for space exploration minor?")
+            self.assertEqual(response['state'], "INFORMATION_UNAVAILABLE")
+
