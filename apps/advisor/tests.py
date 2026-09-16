@@ -104,6 +104,7 @@ class AdvisorServiceTest(TestCase):
         class MockResponse:
             text = "This is not JSON"
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[{'content': 'Test'}]):
             service = AdvisorService()
@@ -122,6 +123,7 @@ class AdvisorServiceTest(TestCase):
         class MockResponse:
             text = json.dumps({"state": "ELIGIBLE", "answer": "You are eligible."})
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         
         mock_course = mock.MagicMock()
         mock_course.course_code = "DATA101"
@@ -244,6 +246,7 @@ class CourseCatalogueSearchTest(TestCase):
         class MockResponse:
             text = json.dumps({"state": "ANSWERED", "answer": "The law courses are LAW101 and LAW201.", "evidence": ["Course: LAW101", "Course: LAW201"]})
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
             response = self.service.process_query("course code for law courses")
@@ -259,6 +262,7 @@ class CourseCatalogueSearchTest(TestCase):
         class MockResponse:
             text = json.dumps({"state": "ANSWERED", "answer": "LAW101 and LAW201.", "evidence": []})
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
             response = self.service.process_query("give me law minor course codes")
             self.assertEqual(response['state'], "ANSWERED")
@@ -271,6 +275,7 @@ class CourseCatalogueSearchTest(TestCase):
         class MockResponse:
             text = json.dumps({"state": "ANSWERED", "answer": "LAW101", "evidence": []})
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
             response = self.service.process_query("what is the course code of Legal Methods?")
             self.assertEqual(response['state'], "ANSWERED")
@@ -283,6 +288,7 @@ class CourseCatalogueSearchTest(TestCase):
         class MockResponse:
             text = json.dumps({"state": "ANSWERED", "answer": "PSYC101", "evidence": []})
         instance.models.generate_content.return_value = MockResponse()
+        self.service.client = instance
         with mock.patch('advisor.services.retrieval_service.RetrievalService.retrieve_evidence', return_value=[]):
             response = self.service.process_query("what courses are in psychology minor?")
             self.assertEqual(response['state'], "ANSWERED")
