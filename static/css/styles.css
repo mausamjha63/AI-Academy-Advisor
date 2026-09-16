@@ -663,26 +663,32 @@ body {
 /* 7. Chat Layout Mobile Override */
 @media (max-width: 1024px) {
     .chat-layout {
-        display: flex;
-        flex-direction: column;
-        height: auto;
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
     }
     .chat-side, .chat-main, .evidence-panel {
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
     }
     .chat-history-sidebar {
         height: auto !important;
         position: static !important;
         max-height: none !important;
+        order: 2; /* Put history below main chat */
     }
     .chat-main {
-        height: 60vh !important;
+        height: auto !important;
+        min-height: 50vh;
+        order: 1; /* Main chat first */
+    }
+    .chat-side {
+        order: 3; /* Evidence last */
     }
     .message {
-        max-width: 90%;
+        max-width: 100% !important;
         word-wrap: break-word;
         overflow-wrap: anywhere;
     }
