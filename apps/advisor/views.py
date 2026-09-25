@@ -105,6 +105,22 @@ def delete_chat_session(request, session_id):
             return JsonResponse({'error': 'Session not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+def delete_all_chats(request):
+    if request.method == 'DELETE':
+        try:
+            # We fetch all chats, optionally scoping to student if needed, but here it looks like
+            # we just clear all chats because the UI is global or student-specific based on request.GET
+            # But wait, DELETE request body or args? Let's check query params.
+            student_id = request.GET.get('student_id')
+            if student_id:
+                ChatSession.objects.filter(student_id=student_id).delete()
+            else:
+                ChatSession.objects.filter(student_id__isnull=True).delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 def upload_document(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid request method'}, status=405)
