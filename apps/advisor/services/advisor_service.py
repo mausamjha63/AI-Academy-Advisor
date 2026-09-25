@@ -262,10 +262,11 @@ class AdvisorService:
                     []
                 )
                 
-            # Extract JSON if it is wrapped in markdown blocks
-            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_answer, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
+            # Extract JSON safely by finding the first { and last }
+            start_idx = raw_answer.find('{')
+            end_idx = raw_answer.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_str = raw_answer[start_idx:end_idx + 1]
             else:
                 json_str = raw_answer
 
