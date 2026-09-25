@@ -331,9 +331,12 @@
                 return;
             }
             data.sessions.forEach(s => {
+                const container = document.createElement('div');
+                container.style.cssText = 'display: flex; gap: 0.25rem; align-items: center; margin-bottom: 0.25rem;';
+                
                 const btn = document.createElement('button');
                 btn.className = 'btn';
-                btn.style.cssText = 'width: 100%; text-align: left; padding: 0.5rem; justify-content: flex-start; font-size: 0.85rem; background: var(--color-surface); border: 1px solid var(--color-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+                btn.style.cssText = 'flex-grow: 1; text-align: left; padding: 0.5rem; justify-content: flex-start; font-size: 0.85rem; background: var(--color-surface); border: 1px solid var(--color-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
                 if (currentSessionId === s.id) {
                     btn.style.borderColor = 'var(--color-primary)';
                     btn.style.background = 'var(--color-primary-light)';
@@ -341,7 +344,38 @@
                 }
                 btn.textContent = s.title;
                 btn.onclick = () => loadSession(s.id);
-                historyList.appendChild(btn);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn';
+                deleteBtn.style.cssText = 'padding: 0.5rem; color: #ef4444; background: transparent; border: 1px solid transparent; flex-shrink: 0; min-width: auto;';
+                deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+                deleteBtn.title = 'Delete chat';
+                deleteBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this chat?')) {
+                        try {
+                            const delRes = await fetch(`/advisor/chat/delete/${s.id}/`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                }
+                            });
+                            if (delRes.ok) {
+                                if (currentSessionId === s.id) {
+                                    document.getElementById('chatHistory').innerHTML = '';
+                                    currentSessionId = null;
+                                }
+                                loadChatHistory();
+                            }
+                        } catch (err) {
+                            console.error('Failed to delete', err);
+                        }
+                    }
+                };
+                
+                container.appendChild(btn);
+                container.appendChild(deleteBtn);
+                historyList.appendChild(container);
             });
         } catch (e) {
             console.error("Failed to load history", e);

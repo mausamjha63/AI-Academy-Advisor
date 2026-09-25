@@ -95,6 +95,16 @@ def get_chat_messages(request, session_id):
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
 
+def delete_chat_session(request, session_id):
+    if request.method == 'DELETE':
+        try:
+            session = ChatSession.objects.get(id=session_id)
+            session.delete()
+            return JsonResponse({'success': True})
+        except ChatSession.DoesNotExist:
+            return JsonResponse({'error': 'Session not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 def upload_document(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid request method'}, status=405)
