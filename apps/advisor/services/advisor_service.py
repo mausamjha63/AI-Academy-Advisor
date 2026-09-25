@@ -271,7 +271,7 @@ class AdvisorService:
                 json_str = raw_answer
 
             try:
-                parsed_response = json.loads(json_str)
+                parsed_response = json.loads(json_str, strict=False)
                 
                 llm_state = parsed_response.get("state", "ANSWERED")
                 answer_text = parsed_response.get("answer", "")
