@@ -162,7 +162,7 @@
                 currentSessionId = data.session_id;
                 loadChatHistory();
             }
-            renderAssistantMessage(data, chatHistory, true);
+            renderAssistantMessage(data, chatHistory, true, data.message_id);
             chatHistory.scrollTop = chatHistory.scrollHeight;
             
         } catch (error) {
@@ -412,7 +412,7 @@
                         </div>
                     `;
                 } else {
-                    renderAssistantMessage(msg.content, chatHistoryDiv, false);
+                    renderAssistantMessage(msg.content, chatHistoryDiv, false, msg.id);
                 }
             });
             chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
@@ -468,7 +468,7 @@
     });
     
     // Reusable render function for assistant messages
-    function renderAssistantMessage(data, container, updateEvidence = true) {
+    function renderAssistantMessage(data, container, updateEvidence = true, messageId = null) {
         let badgeClass = "badge badge-neutral";
         let stateStyle = "";
         if (data.state === 'ELIGIBLE') { badgeClass = 'badge badge-success'; stateStyle = "background: #d1fae5; color: #065f46; border-color: #34d399;"; }
@@ -477,7 +477,27 @@
         else if (data.state === 'CONFLICTING_INFORMATION') { badgeClass = 'badge badge-warning'; stateStyle = "background: #ffedd5; color: #9a3412; border-color: #fdba74;"; }
         else { badgeClass = 'badge badge-neutral'; stateStyle = "background: #f1f5f9; color: #334155; border-color: #cbd5e1;"; }
         
-        let contentHtml = `<div style="margin-top: 0.5rem; line-height: 1.5; font-size: 0.95rem; white-space: pre-wrap;">${data.answer}</div>`;
+        let answerText = data.answer || "";
+        
+        // Simple regex to find mermaid blocks and replace with div
+        let hasMermaid = false;
+        if (answerText.includes('```mermaid')) {
+            hasMermaid = true;
+            answerText = answerText.replace(/```mermaid\n([\s\S]*?)```/g, '<div class="mermaid" style="background: white; padding: 1rem; border-radius: 8px; margin: 0.5rem 0; overflow-x: auto;">$1</div>');
+        }
+        
+        let contentHtml = `<div style="margin-top: 0.5rem; line-height: 1.5; font-size: 0.95rem; white-space: pre-wrap;">${answerText}</div>`;
+        
+        if (messageId) {
+            contentHtml += `
+                <div style="margin-top: 0.75rem;">
+                    <audio controls style="height: 32px; width: 100%; border-radius: 4px;">
+                        <source src="/advisor/chat/tts/${messageId}/" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            `;
+        }
         
         if (data.reason) {
             contentHtml += `
@@ -509,6 +529,13 @@
                 ${contentHtml}
             </div>
         `;
+        
+        // Initialize mermaid if needed
+        if (hasMermaid && typeof mermaid !== 'undefined') {
+            setTimeout(() => {
+                mermaid.init(undefined, container.querySelectorAll('.mermaid'));
+            }, 100);
+        }
         
         if (updateEvidence) {
             document.getElementById('stateIndicator').textContent = data.state;

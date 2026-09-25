@@ -9,6 +9,35 @@ from .academic_data_service import AcademicDataService
 from .decision_engine import DecisionEngine
 from advisor.prompts import get_prompt_builder
 
+class VerificationAgent:
+    """Agentic Extension: Verifies if the generated recommendation is hallucinated or properly grounded."""
+    def __init__(self, client):
+        self.client = client
+
+    def verify(self, query: str, answer: str, evidence: list) -> bool:
+        if not self.client or not answer or not evidence:
+            return True # Fallback if unavailable
+            
+        prompt = f"""You are a strict VERIFICATION AGENT.
+Your job is to check if the proposed 'Answer' is entirely supported by the 'Evidence'.
+If the answer makes claims not present in the evidence, you must return exactly "FAIL".
+If the answer is supported by the evidence, you must return exactly "PASS".
+
+USER QUERY: {query}
+PROPOSED ANSWER: {answer}
+EVIDENCE: {json.dumps(evidence)}
+
+Output ONLY "PASS" or "FAIL".
+"""
+        try:
+            res = self.client.models.generate_content(
+                model=os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash'),
+                contents=prompt,
+            )
+            return "PASS" in res.text.upper()
+        except Exception:
+            return True # Fail open to prevent blocking legitimate responses on quota limits
+
 class AdvisorService:
     def __init__(self):
         self.retrieval_service = RetrievalService()
@@ -244,14 +273,24 @@ class AdvisorService:
                 parsed_response = json.loads(json_str)
                 
                 llm_state = parsed_response.get("state", "ANSWERED")
+                answer_text = parsed_response.get("answer", "")
                 
                 # Decision Engine is absolutely authoritative.
                 if decision_state and llm_state != decision_state:
                     llm_state = decision_state
                     
+                # Phase 9: Agentic Verification
+                if llm_state in ["ANSWERED", "ELIGIBLE", "NOT_ELIGIBLE"] and answer_text and all_evidence:
+                    verifier = VerificationAgent(self.client)
+                    is_valid = verifier.verify(user_query, answer_text, all_evidence)
+                    if not is_valid:
+                        llm_state = DecisionEngine.STATES.get('OUT_OF_CONTEXT', 'OUT_OF_CONTEXT')
+                        answer_text = "My verification agent determined that I don't have enough verified evidence to safely answer this without hallucinating. Please contact the academic office."
+                        parsed_response['reason'] = "Failed Agentic Verification step."
+                        
                 return self._build_response(
                     state=llm_state,
-                    answer=parsed_response.get("answer", ""),
+                    answer=answer_text,
                     reason=parsed_response.get("reason"),
                     missing_info=parsed_response.get("missing_information", []),
                     evidence=parsed_response.get("evidence", []),

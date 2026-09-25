@@ -46,14 +46,15 @@ def advisor_chat(request):
         response = service.process_query(query, student_id, session_id=session.id)
         
         # 4. Save Assistant Message
-        ChatMessage.objects.create(
+        assistant_msg = ChatMessage.objects.create(
             session=session,
             role='assistant',
             content=response
         )
         
-        # Attach session_id so frontend knows it
+        # Attach session_id and message_id so frontend knows it
         response['session_id'] = session.id
+        response['message_id'] = assistant_msg.id
         
         return JsonResponse(response)
         
@@ -87,6 +88,7 @@ def get_chat_messages(request, session_id):
         data = []
         for m in messages:
             data.append({
+                'id': m.id,
                 'role': m.role,
                 'content': m.content,
                 'timestamp': m.timestamp.isoformat()
@@ -120,6 +122,43 @@ def delete_all_chats(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+import io
+from django.http import FileResponse
+from gtts import gTTS
+
+def text_to_speech(request, message_id):
+    try:
+        message = ChatMessage.objects.get(id=message_id)
+        if message.role != 'assistant':
+            return JsonResponse({'error': 'Can only generate speech for AI messages'}, status=400)
+            
+        content_dict = message.content
+        if isinstance(content_dict, str):
+            import json
+            try:
+                content_dict = json.loads(content_dict)
+            except:
+                pass
+
+        if isinstance(content_dict, dict):
+            text_to_speak = content_dict.get('answer', '')
+        else:
+            text_to_speak = str(content_dict)
+            
+        if not text_to_speak.strip():
+            return JsonResponse({'error': 'No text found to speak'}, status=400)
+            
+        tts = gTTS(text=text_to_speak, lang='en')
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        
+        return FileResponse(fp, as_attachment=False, content_type='audio/mpeg')
+    except ChatMessage.DoesNotExist:
+        return JsonResponse({'error': 'Message not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def upload_document(request):
     if request.method != "POST":
