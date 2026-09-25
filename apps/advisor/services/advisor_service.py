@@ -42,7 +42,7 @@ class AdvisorService:
 
         return "ACADEMIC_IN_SCOPE"
 
-    def process_query(self, user_query, student_id=None):
+    def process_query(self, user_query, student_id=None, session_id=None):
         intent = self._classify_intent(user_query)
         
         if intent == "GREETING":
@@ -118,7 +118,28 @@ class AdvisorService:
                     "metadata": course.source_metadata
                 })
                 
-        all_evidence = rag_evidence + structured_evidence
+        # Check if this session has uploaded documents
+        is_document_rag = False
+        uploaded_evidence = []
+        if session_id:
+            from advisor.models import UploadedDocumentChunk
+            is_document_rag = UploadedDocumentChunk.objects.filter(document__session_id=session_id).exists()
+            
+        if is_document_rag:
+            # DOCUMENT RAG MODE
+            uploaded_evidence = self.retrieval_service.retrieve_session_document_evidence(user_query, session_id, top_k=5)
+            all_evidence = uploaded_evidence
+            
+            # If no relevant chunks are found for the uploaded document query, short circuit.
+            if not all_evidence:
+                return self._build_response(
+                    DecisionEngine.STATES.get('OUT_OF_CONTEXT', 'OUT_OF_CONTEXT'),
+                    "I couldn't find relevant information in the uploaded document to answer your question.",
+                    []
+                )
+        else:
+            # NORMAL ACADEMIC RAG MODE
+            all_evidence = rag_evidence + structured_evidence
         
         # If BOTH RAG and Structured DB return nothing, answer Information Unavailable immediately
         if not all_evidence:
@@ -172,7 +193,10 @@ class AdvisorService:
                 pass
 
         # 5. LLM Generation
-        prompt_version = os.environ.get("PROMPT_VERSION", "v4")
+        if is_document_rag:
+            prompt_version = "document_rag"
+        else:
+            prompt_version = os.environ.get("PROMPT_VERSION", "v4")
         prompt_builder = get_prompt_builder(prompt_version)
         prompt = prompt_builder.build_prompt(user_query, all_evidence, decision_state, decision_reason, student_data)
         

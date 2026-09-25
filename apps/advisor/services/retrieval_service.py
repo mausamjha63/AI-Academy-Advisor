@@ -67,3 +67,41 @@ class RetrievalService:
         except Exception as e:
             logger.error(f"Retrieval error: {e}")
             return []
+
+    def retrieve_session_document_evidence(self, query, session_id, top_k=5):
+        try:
+            res = self.client.models.embed_content(
+                model=self.model_name,
+                contents=query
+            )
+            query_embedding = res.embeddings[0].values
+            
+            from advisor.models import UploadedDocumentChunk
+            chunks = UploadedDocumentChunk.objects.filter(document__session_id=session_id, embedding__isnull=False)
+            
+            scored_chunks = []
+            for chunk in chunks:
+                similarity = self._cosine_similarity(query_embedding, chunk.embedding)
+                scored_chunks.append((similarity, chunk))
+                
+            scored_chunks.sort(key=lambda x: x[0], reverse=True)
+            
+            evidence_list = []
+            for score, chunk in scored_chunks[:top_k]:
+                if score < self.threshold:
+                    continue
+                    
+                evidence = {
+                    "content": chunk.content,
+                    "source": chunk.document.filename,
+                    "page": chunk.page_or_sheet,
+                    "metadata": {"type": "uploaded_document"},
+                    "score": score
+                }
+                evidence_list.append(evidence)
+                
+            return evidence_list
+            
+        except Exception as e:
+            logger.error(f"Document Retrieval error: {e}")
+            return []
