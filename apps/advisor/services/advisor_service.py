@@ -201,49 +201,66 @@ class AdvisorService:
         prompt = prompt_builder.build_prompt(user_query, all_evidence, decision_state, decision_reason, student_data)
         
         if self.client:
-            try:
-                response = self.client.models.generate_content(
-                    model=os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash'),
-                    contents=prompt,
-                )
-                raw_answer = response.text
-                
-                # Extract JSON if it is wrapped in markdown blocks
-                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_answer, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(1)
-                else:
-                    json_str = raw_answer
-
+            models_to_try = [
+                os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash'),
+                'gemini-3.7-flash',
+                'gemini-3.6-flash',
+                'gemini-3.5-flash',
+                'gemini-3.1-flash-lite',
+                'gemini-flash-latest'
+            ]
+            
+            raw_answer = None
+            last_error = None
+            
+            for model_name in models_to_try:
                 try:
-                    parsed_response = json.loads(json_str)
-                    
-                    llm_state = parsed_response.get("state", "ANSWERED")
-                    
-                    # Decision Engine is absolutely authoritative.
-                    if decision_state and llm_state != decision_state:
-                        llm_state = decision_state
-                        
-                    return self._build_response(
-                        state=llm_state,
-                        answer=parsed_response.get("answer", ""),
-                        reason=parsed_response.get("reason"),
-                        missing_info=parsed_response.get("missing_information", []),
-                        evidence=parsed_response.get("evidence", []),
-                        recommendation=parsed_response.get("recommendation"),
-                        uncertainty=parsed_response.get("uncertainty")
+                    response = self.client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
                     )
+                    raw_answer = response.text
+                    break  # Success, exit loop
+                except Exception as e:
+                    print(f"[WARN] LLM API Error with model {model_name}: {type(e).__name__} - {str(e)}")
+                    last_error = e
+            
+            if not raw_answer:
+                print(f"[ERROR] All models in fallback chain failed. Last error: {type(last_error).__name__} - {str(last_error)}")
+                return self._build_response(
+                    decision_state or "ERROR", 
+                    "The AI service is temporarily unavailable. Please try again.", 
+                    []
+                )
+                
+            # Extract JSON if it is wrapped in markdown blocks
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', raw_answer, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                json_str = raw_answer
+
+            try:
+                parsed_response = json.loads(json_str)
+                
+                llm_state = parsed_response.get("state", "ANSWERED")
+                
+                # Decision Engine is absolutely authoritative.
+                if decision_state and llm_state != decision_state:
+                    llm_state = decision_state
                     
-                except json.JSONDecodeError:
-                    print("[ERROR] Failed to parse JSON from LLM")
-                    return self._build_response(
-                        decision_state or "ERROR", 
-                        "The AI service is temporarily unavailable. Please try again.", 
-                        []
-                    )
-                    
-            except Exception as e:
-                print(f"[ERROR] LLM API Error: {type(e).__name__} - {str(e)}")
+                return self._build_response(
+                    state=llm_state,
+                    answer=parsed_response.get("answer", ""),
+                    reason=parsed_response.get("reason"),
+                    missing_info=parsed_response.get("missing_information", []),
+                    evidence=parsed_response.get("evidence", []),
+                    recommendation=parsed_response.get("recommendation"),
+                    uncertainty=parsed_response.get("uncertainty")
+                )
+                
+            except json.JSONDecodeError:
+                print("[ERROR] Failed to parse JSON from LLM")
                 return self._build_response(
                     decision_state or "ERROR", 
                     "The AI service is temporarily unavailable. Please try again.", 
